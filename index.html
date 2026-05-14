@@ -3,30 +3,62 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Qantas Crash Sim</title>
+    <title>Qantas Destruction Prototype</title>
     
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     
     <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-physics-system@v4.2.2/dist/aframe-physics-system.min.js"></script>
-    
-    <style>
-        .label {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(255, 255, 255, 0.9);
-            padding: 10px 20px;
-            border-radius: 50px;
-            font-family: sans-serif;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            z-index: 100; /* Keeps it in front of the 3D canvas */
-        }
-    </style>
+
+    <script>
+        AFRAME.registerComponent('crash-listener', {
+            init: function () {
+                let hasCrashed = false;
+
+                // Listen for a physics collision
+                this.el.addEventListener('collide', (event) => {
+                    // Check if it hit the ground and hasn't crashed yet
+                    if (event.detail.body.el.id === 'ground' && !hasCrashed) {
+                        hasCrashed = true;
+
+                        // Step 1: Hide the plane
+                        this.el.setAttribute('visible', 'false');
+
+                        // Step 2: Create a fireball explosion
+                        let explosion = document.createElement('a-sphere');
+                        explosion.setAttribute('color', '#ff4500'); // Orange-red
+                        explosion.setAttribute('position', this.el.getAttribute('position'));
+                        explosion.setAttribute('radius', '1');
+                        // Animate it getting huge and fading out
+                        explosion.setAttribute('animation__scale', 'property: scale; to: 15 15 15; dur: 500; easing: easeOutQuad');
+                        explosion.setAttribute('animation__fade', 'property: material.opacity; to: 0; dur: 500; easing: easeOutQuad');
+                        this.el.sceneEl.appendChild(explosion);
+
+                        // Step 3: Spawn flying debris
+                        for (let i = 0; i < 10; i++) {
+                            let debris = document.createElement('a-box');
+                            debris.setAttribute('color', '#333333'); // Dark grey metal
+                            debris.setAttribute('depth', '0.5');
+                            debris.setAttribute('height', '0.5');
+                            debris.setAttribute('width', '0.5');
+                            // Start at the crash site
+                            debris.setAttribute('position', this.el.getAttribute('position'));
+                            // Make it a physics object
+                            debris.setAttribute('dynamic-body', 'shape: box; mass: 1');
+                            // Shoot it out in a random direction
+                            let velX = (Math.random() * 20) - 10;
+                            let velY = (Math.random() * 20) + 5; // Shoot upward
+                            let velZ = (Math.random() * 20) - 10;
+                            debris.setAttribute('velocity', `${velX} ${velY} ${velZ}`);
+                            
+                            this.el.sceneEl.appendChild(debris);
+                        }
+                    }
+                });
+            }
+        });
+    </script>
 </head>
 <body>
-
-    <div class="label">Physics Sim: Qantas Plane Drop</div>
 
     <a-scene physics="gravity: -9.8">
         
@@ -36,23 +68,25 @@
 
         <a-entity 
             gltf-model="#plane-model" 
-            position="0 20 -15" 
+            position="0 40 -20" 
             scale="1 1 1" 
-            dynamic-body="shape: box">
+            dynamic-body="shape: box; mass: 50"
+            crash-listener>
         </a-entity>
 
         <a-plane 
-            position="0 0 -15" 
+            id="ground"
+            position="0 0 -20" 
             rotation="-90 0 0" 
-            width="100" 
-            height="100" 
-            color="#5c5c5c" 
+            width="200" 
+            height="200" 
+            color="#4CAF50" 
             static-body>
         </a-plane>
 
         <a-sky color="#87CEEB"></a-sky>
 
-        <a-entity camera look-controls position="0 2 0"></a-entity>
+        <a-entity camera look-controls position="0 5 10"></a-entity>
 
     </a-scene>
 
